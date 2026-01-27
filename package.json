@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "k6:vcontent": "docker run --rm --env-file env/local.env -v ${PWD}:/app -w /app grafana/k6 run scripts/main.js"
+  }
+}
