@@ -2,7 +2,7 @@
 export function createCustomMessagePayload() {
   return {
     title: randomTitle(),
-    content: "",
+    content: " ",
     settings: {
       displayDurationInSecond: 15,
     },

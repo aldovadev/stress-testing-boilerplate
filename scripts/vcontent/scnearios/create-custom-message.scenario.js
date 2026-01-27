@@ -17,6 +17,9 @@ export default function createCustomMessage() {
     { endpoint: 'custom-message' },
   );
 
+  console.log(`Status: ${res.status}`);
+  console.log(`Response: ${res.body}`);
+
   customMessageDuration.add(res.timings.duration);
   customMessageErrors.add(res.status >= 400);
 }
