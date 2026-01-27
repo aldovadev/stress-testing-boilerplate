@@ -6,7 +6,7 @@ export function createCustomMessagePayload() {
     settings: {
       displayDurationInSecond: 15,
     },
-    templateId: "70478fa0-0f6c-41ee-bfe6-267fe347a0da",
+    templateId: "80742ddd-136c-44c6-a247-d508b831b718",
     fontSettings: {
       size: "EXTRA_LARGE",
       color: "BLACK",

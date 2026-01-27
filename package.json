@@ -1,5 +1,6 @@
 {
   "scripts": {
-    "k6:vcontent": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e VUS=50 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run scripts/vcontent/main.js"
+    "k6:vcontent:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e VUS=50 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run scripts/vcontent/main.js",
+    "k6:vcontent:dev": "docker run --rm --env-file env/development.env -e VUS=100 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run scripts/vcontent/main.js"
   }
 }
