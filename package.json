@@ -1,6 +1,20 @@
 {
+  "name": "stress-testing-boilerplate",
+  "version": "1.0.0",
+  "description": "K6 stress testing framework with real-time metrics dashboard",
   "scripts": {
-    "k6:vcontent:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e VUS=50 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run scripts/vcontent/main.js",
-    "k6:vcontent:dev": "docker run --rm --env-file env/dev.env -e VUS=5 -e DURATION=15s -v $(pwd):/app -w /app grafana/k6 run scripts/vcontent/main.js"
+    "k6:vcontent:health:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=health -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:smoke:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=smoke -e VUS=2 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:load:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=load -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:stress:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=stress -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:soak:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=soak -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:health:dev": "docker run --rm --env-file env/dev.env -e TEST_PHASE=health -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:smoke:dev": "docker run --rm --env-file env/dev.env -e TEST_PHASE=smoke -e VUS=2 -e DURATION=30s -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:load:dev": "docker run --rm --env-file env/dev.env -e TEST_PHASE=load -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:stress:dev": "docker run --rm --env-file env/dev.env -e TEST_PHASE=stress -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "k6:vcontent:soak:dev": "docker run --rm --env-file env/dev.env -e TEST_PHASE=soak -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/vcontent/main.js",
+    "dashboard:install": "cd dashboard && npm install",
+    "dashboard:dev": "cd dashboard && npm run dev",
+    "dashboard:server": "cd dashboard && node server/server.js"
   }
 }
