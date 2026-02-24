@@ -1,7 +1,21 @@
 @import "tailwindcss";
 
-/* Custom dark theme tokens */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Light theme tokens (default) ─── */
 :root {
+  --color-bg-primary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-accent: #3b82f6;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+}
+
+/* ─── Dark theme tokens ─── */
+.dark {
   --color-bg-primary: #030712;
   --color-bg-card: #111827;
   --color-bg-card-hover: #1f2937;
@@ -12,6 +26,11 @@
   --color-danger: #ef4444;
 }
 
+/* ─── Base transitions ─── */
+html {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -19,15 +38,27 @@
 }
 
 ::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.dark ::-webkit-scrollbar-track {
   background: #030712;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #d1d5db;
   border-radius: 3px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
 ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
 
@@ -37,18 +68,32 @@
 }
 
 .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .recharts-default-tooltip {
   background-color: #1f2937 !important;
   border: 1px solid #374151 !important;
-  border-radius: 8px !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
 }
 
 .recharts-tooltip-label {
-  color: #9ca3af !important;
+  color: #6b7280 !important;
   font-size: 12px !important;
 }
 
+.dark .recharts-tooltip-label {
+  color: #9ca3af !important;
+}
+
 .recharts-tooltip-item {
-  color: #e5e7eb !important;
+  color: #374151 !important;
   font-size: 13px !important;
+}
+
+.dark .recharts-tooltip-item {
+  color: #e5e7eb !important;
 }

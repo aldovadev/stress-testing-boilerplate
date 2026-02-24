@@ -7,6 +7,8 @@ import { createInterface } from 'readline';
 import { resolve, join } from 'path';
 import { createServer } from 'http';
 import { parseLine, categorizeMetric } from './parser.js';
+import { startTest, stopTest, getStatus as getRunnerStatus, detectRunner } from './runner.js';
+import { getPresets, savePreset, deletePreset, markPresetUsed } from './presets.js';
 
 // ─── Configuration ──────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
@@ -107,6 +109,94 @@ app.post('/api/reset', (req, res) => {
   isTestRunning = false;
   testStartTime = null;
   broadcast({ type: 'reset' });
+  res.json({ ok: true });
+});
+
+// ─── Test Runner Endpoints ──────────────────────────────────────────
+
+// POST /api/run-test — Start a k6 test with the given configuration
+app.post('/api/run-test', (req, res) => {
+  const config = req.body;
+
+  if (!config.baseUrl) {
+    return res.status(400).json({ ok: false, error: 'baseUrl is required.' });
+  }
+
+  // Reset state before starting new test
+  metricDefinitions.clear();
+  dataBuffer = [];
+  bytesRead = 0;
+
+  const result = startTest(
+    config,
+    // onOutput callback — broadcast k6 console output
+    (line) => {
+      broadcast({ type: 'runner_output', data: { line } });
+    },
+    // onExit callback — mark test as completed
+    (code, signal) => {
+      isTestRunning = false;
+      broadcast({ type: 'test_complete', data: { exitCode: code, signal } });
+
+      // Try to read and broadcast final summary
+      const summaryFile = join(RESULTS_DIR, 'summary.json');
+      if (existsSync(summaryFile)) {
+        try {
+          const summary = JSON.parse(readFileSync(summaryFile, 'utf-8'));
+          broadcast({ type: 'summary', data: summary });
+        } catch { /* ignore */ }
+      }
+    }
+  );
+
+  if (result.ok) {
+    isTestRunning = true;
+    testStartTime = new Date().toISOString();
+    broadcast({ type: 'test_start', data: { startTime: testStartTime, config } });
+  }
+
+  res.json(result);
+});
+
+// POST /api/stop-test — Stop a running k6 test
+app.post('/api/stop-test', (req, res) => {
+  const result = stopTest();
+  if (result.ok) {
+    isTestRunning = false;
+    broadcast({ type: 'test_complete', data: { stopped: true } });
+  }
+  res.json(result);
+});
+
+// GET /api/runner-status — Current runner status + available runners
+app.get('/api/runner-status', (req, res) => {
+  res.json(getRunnerStatus());
+});
+
+// ─── Preset Endpoints ───────────────────────────────────────────────
+
+// GET /api/presets — List all saved presets
+app.get('/api/presets', (req, res) => {
+  res.json(getPresets());
+});
+
+// POST /api/presets — Save or update a preset
+app.post('/api/presets', (req, res) => {
+  const { name, config } = req.body;
+  if (!name || !config) {
+    return res.status(400).json({ ok: false, error: 'name and config are required.' });
+  }
+  res.json(savePreset(name, config));
+});
+
+// DELETE /api/presets/:name — Delete a preset
+app.delete('/api/presets/:name', (req, res) => {
+  res.json(deletePreset(decodeURIComponent(req.params.name)));
+});
+
+// POST /api/presets/:name/use — Mark a preset as recently used
+app.post('/api/presets/:name/use', (req, res) => {
+  markPresetUsed(decodeURIComponent(req.params.name));
   res.json({ ok: true });
 });
 
@@ -260,12 +350,18 @@ server.listen(PORT, () => {
 ║   Results Dir: ${RESULTS_DIR}                        
 ║──────────────────────────────────────────────────║
 ║   Endpoints:                                     ║
-║     GET  /api/status    - Test status            ║
-║     GET  /api/summary   - Latest summary         ║
-║     GET  /api/history   - Past test runs         ║
-║     GET  /api/metrics   - Metric definitions     ║
-║     POST /api/reset     - Clear buffer           ║
-║     WS   /ws            - Realtime stream        ║
+║     GET  /api/status       - Test status         ║
+║     GET  /api/summary      - Latest summary      ║
+║     GET  /api/history      - Past test runs      ║
+║     GET  /api/metrics      - Metric definitions  ║
+║     POST /api/reset        - Clear buffer        ║
+║     POST /api/run-test     - Start k6 test       ║
+║     POST /api/stop-test    - Stop k6 test        ║
+║     GET  /api/runner-status - Runner info        ║
+║     GET  /api/presets      - List presets        ║
+║     POST /api/presets      - Save preset         ║
+║     DEL  /api/presets/:name- Delete preset       ║
+║     WS   /ws               - Realtime stream    ║
 ╚══════════════════════════════════════════════════╝
   `);
 

@@ -10,5 +10,8 @@ results/*.gz
 dashboard/node_modules/
 dashboard/dist/
 
+# Presets (generated at runtime — keep example)
+dashboard/server/presets.json
+
 # Node
 node_modules/

@@ -1,22 +1,65 @@
+import { useMemo } from 'react';
 import { useMetricsStore } from '../store/metricsStore';
 import MetricCard from '../components/MetricCard';
 import RealtimeChart from '../components/RealtimeChart';
-import { Timer, Zap, AlertTriangle, Users, ArrowUpDown, Activity } from 'lucide-react';
+import { Timer, Zap, AlertTriangle, Users } from 'lucide-react';
+
+// Built-in k6 metrics that have dedicated charts — don't render them again in the dynamic section
+const BUILTIN_CHART_METRICS = new Set([
+  'http_req_duration', 'http_reqs', 'http_req_failed', 'vus', 'vus_max',
+  'http_req_waiting', 'data_sent', 'data_received', 'http_req_connecting',
+  'iterations', 'iteration_duration', 'http_req_sending', 'http_req_receiving',
+  'http_req_tls_handshaking', 'http_req_blocked', 'checks',
+]);
+
+// Color palette for dynamic charts
+const CHART_COLORS = [
+  '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#a855f7',
+];
 
 export default function LiveDashboard() {
   const { state } = useMetricsStore();
-  const { series, currentVUs, currentRPS, currentErrorRate, currentP95 } = state;
+  const { series, definitions, currentVUs, currentRPS, currentErrorRate, currentP95 } = state;
 
   // Determine status colors based on thresholds
   const errorStatus = currentErrorRate > 0.1 ? 'danger' : currentErrorRate > 0.05 ? 'warning' : 'success';
   const p95Status = currentP95 > 1000 ? 'danger' : currentP95 > 500 ? 'warning' : 'success';
 
+  // ─── Dynamic Custom Metric Charts ───────────────────────────────
+  // Auto-discover custom metrics from the stream and render charts dynamically
+  const customCharts = useMemo(() => {
+    const charts: Array<{
+      name: string;
+      title: string;
+      metricType: string;
+      data: typeof series[string];
+    }> = [];
+
+    for (const [name, def] of Object.entries(definitions)) {
+      // Skip built-in k6 metrics
+      if (BUILTIN_CHART_METRICS.has(name)) continue;
+
+      // Only render if we have data
+      if (!series[name] || series[name].length === 0) continue;
+
+      charts.push({
+        name,
+        title: formatMetricTitle(name),
+        metricType: def.metricType,
+        data: series[name],
+      });
+    }
+
+    return charts;
+  }, [definitions, series]);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-100">Live Dashboard</h2>
-        <p className="text-sm text-gray-500 mt-1">Realtime metrics streaming from k6 test execution</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Live Dashboard</h2>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Realtime metrics streaming from k6 test execution</p>
       </div>
 
       {/* Summary Cards */}
@@ -54,7 +97,7 @@ export default function LiveDashboard() {
         />
       </div>
 
-      {/* Charts Grid */}
+      {/* Standard Built-in Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Response Time Chart */}
         <RealtimeChart
@@ -111,23 +154,34 @@ export default function LiveDashboard() {
           ]}
           yAxisUnit="ms"
         />
-
-        {/* Custom Message Duration (if available) */}
-        <RealtimeChart
-          title="Custom Message Duration (ms)"
-          data={series['custom_message_duration'] || []}
-          lines={[
-            { dataKey: 'avg', color: '#3b82f6', label: 'Average' },
-            { dataKey: 'p95', color: '#f59e0b', label: 'P95' },
-            { dataKey: 'max', color: '#ef4444', label: 'Max', dashed: true },
-          ]}
-          yAxisUnit="ms"
-        />
       </div>
 
-      {/* Additional Metrics Row */}
+      {/* ─── Dynamic Custom Metric Charts ──────────────────────────── */}
+      {customCharts.length > 0 && (
+        <>
+          <div>
+            <h3 className="text-base font-medium text-gray-800 dark:text-gray-200">Custom Metrics</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Auto-detected from the current test ({customCharts.length} metric{customCharts.length !== 1 ? 's' : ''})
+            </p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {customCharts.map((chart, idx) => (
+              <RealtimeChart
+                key={chart.name}
+                title={chart.title}
+                data={chart.data}
+                lines={getChartLines(chart.metricType, idx)}
+                yAxisUnit={chart.metricType === 'trend' ? 'ms' : ''}
+                chartType={chart.metricType === 'counter' ? 'area' : 'line'}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Additional Built-in Metrics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Data Transfer */}
         <RealtimeChart
           title="Data Sent (bytes/s)"
           data={series['data_sent'] || []}
@@ -142,7 +196,6 @@ export default function LiveDashboard() {
           lines={[{ dataKey: 'avg', color: '#a855f7', label: 'Bytes/s' }]}
           height={180}
         />
-        {/* Connection Time */}
         <RealtimeChart
           title="Connection Time (ms)"
           data={series['http_req_connecting'] || []}
@@ -153,4 +206,58 @@ export default function LiveDashboard() {
       </div>
     </div>
   );
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Format a metric name into a human-readable chart title.
+ * e.g., "api_users_duration" → "Api Users Duration (ms)"
+ */
+function formatMetricTitle(name: string): string {
+  const isTime = name.endsWith('_duration') || name.endsWith('_ttfb') ||
+    name.endsWith('_connecting') || name.endsWith('_tls_handshaking');
+  const suffix = isTime ? ' (ms)' : '';
+
+  const title = name
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  return title + suffix;
+}
+
+/**
+ * Get chart line configurations based on metric type.
+ * - Trend: avg, p95, max lines
+ * - Counter: count area
+ * - Rate: avg line (as percentage)
+ * - Gauge: value line
+ */
+function getChartLines(metricType: string, colorIndex: number) {
+  const baseColor = CHART_COLORS[colorIndex % CHART_COLORS.length];
+
+  switch (metricType) {
+    case 'trend':
+      return [
+        { dataKey: 'avg', color: baseColor, label: 'Average' },
+        { dataKey: 'p95', color: '#f59e0b', label: 'P95' },
+        { dataKey: 'max', color: '#ef4444', label: 'Max', dashed: true },
+      ];
+    case 'counter':
+      return [
+        { dataKey: 'count', color: baseColor, label: 'Count' },
+      ];
+    case 'rate':
+      return [
+        { dataKey: 'avg', color: baseColor, label: 'Rate' },
+      ];
+    case 'gauge':
+      return [
+        { dataKey: 'value', color: baseColor, label: 'Value' },
+      ];
+    default:
+      return [
+        { dataKey: 'avg', color: baseColor, label: 'Value' },
+      ];
+  }
 }

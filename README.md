@@ -1,70 +1,97 @@
 # K6 Stress Testing Framework
 
-A comprehensive performance and load testing framework built with **k6** + a **real-time metrics dashboard** (Vite + React + Recharts + WebSocket).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**App-agnostic** performance and load testing framework built with **k6** + a **real-time metrics dashboard** (Vite + React + Recharts + WebSocket).
+
+Test **any** endpoint or page — configure targets dynamically from the dashboard UI or via CLI. Supports all HTTP methods, frontend page loads, backend API testing, and saved presets.
 
 ---
 
 ## Architecture
 
 ```
-┌──────────┐   --out json    ┌──────────────┐
-│  k6      │ ──────────────▶ │  results/    │
-│ (Docker) │   NDJSON file   │  output.json │
-└──────────┘                 └──────┬───────┘
-     │                              │ tail
-     │  handleSummary()     ┌───────┴──────────┐
-     └─────────────────────▶│  Express + WS    │
-       results/summary.json │  Backend :3001   │
-                            └───────┬──────────┘
-                                    │ WebSocket
-                            ┌───────┴──────────┐
-                            │  Vite + React    │
-                            │  Dashboard :5173 │
-                            │  (Recharts)      │
-                            └──────────────────┘
+                          +-------------------+
+                          |   Dashboard UI    |
+                          |  (Vite + React)   |
+                          |    :5173          |
+                          +--------+----------+
+                                   |
+                          WebSocket + REST API
+                                   |
+                          +--------+----------+
+                          | Express Backend   |
+                          |    :3001          |
+                          +---+----------+----+
+                              |          |
+                   POST /api/run-test   tail results/output.json
+                              |          |
+                         +----+----+    +--+
+                         | k6 CLI  |    |  | chokidar watcher
+                         | or      |    |  +----> broadcast via WS
+                         | Docker  |----+
+                         +---------+
+                              |
+                         --out json
+                              |
+                    results/output.json
+                    results/summary.json
 ```
 
-**Flow:**
-1. k6 runs inside Docker and streams NDJSON metrics to `results/output.json`
-2. Express backend tails the file in realtime using `chokidar`
-3. New metrics are parsed and pushed to all connected dashboard clients via WebSocket
-4. React frontend renders live-updating charts with Recharts
+---
+
+## Features
+
+- **App-Agnostic**: Test any URL — no hardcoded endpoints. Configure target, method, headers, body, auth from the dashboard or CLI.
+- **FE + BE Testing**: Toggle between frontend page load testing (GET routes) and backend API testing (all HTTP methods).
+- **Dynamic Dashboard**: Real-time charts auto-discover custom metrics from the k6 stream  no chart configuration needed.
+- **Test Runner**: Launch and stop k6 tests directly from the dashboard. Auto-detects native k6 CLI or Docker.
+- **Saved Presets**: Save test configurations and reload them instantly.
+- **5-Phase Testing**: smoke, load, stress, soak phases with pre-configured VU profiles and thresholds.
+- **CLI Support**: npm scripts for CI/CD pipelines with environment file support.
+- **Realtime Streaming**: NDJSON file tailing via chokidar + WebSocket broadcast to React frontend.
+- **Custom Metrics**: Per-endpoint metrics (duration, TTFB, errors, status codes, response size) via factory pattern.
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-- **Docker** (for running k6)
-- **Node.js 18+** (for the dashboard)
-
 ### 1. Install Dashboard Dependencies
+
 ```bash
-cd dashboard
-npm install
+npm run dashboard:install
 ```
 
 ### 2. Start the Dashboard
+
 ```bash
-# From the dashboard/ directory
-npm run dev
-```
-This starts both the Express backend (port 3001) and Vite dev server (port 5173).
-
-### 3. Open the Dashboard
-Navigate to **http://localhost:5173**
-
-### 4. Run a Test
-Open a new terminal from the project root:
-```bash
-# Smoke test against local API
-npm run k6:vcontent:smoke:local
-
-# Load test against dev environment
-npm run k6:vcontent:load:dev
+npm run dashboard:dev
 ```
 
-The dashboard will automatically detect the test run and start showing live metrics.
+Opens at [http://localhost:5173](http://localhost:5173) with the backend API at port 3001.
+
+### 3. Run a Test
+
+**Option A — Dashboard UI** (recommended):
+1. Navigate to **New Test** in the sidebar
+2. Choose **Backend API** or **Frontend Page**
+3. Enter target URL, endpoint, HTTP method, headers, body
+4. Select test phase (smoke/load/stress/soak)
+5. Click **Run Test**
+6. Switch to **Live Dashboard** to watch metrics in real-time
+
+**Option B — CLI**:
+
+```bash
+# Smoke test against local env
+npm run k6:smoke:local -- -e ENDPOINT=/api/users -e HTTP_METHOD=GET
+
+# Load test against dev env with POST body
+npm run k6:load:dev -- -e ENDPOINT=/api/users -e HTTP_METHOD=POST -e 'REQUEST_BODY={"name":"test"}'
+
+# Stress test with auth
+npm run k6:stress:dev -- -e ENDPOINT=/api/protected -e AUTH_TOKEN=your_jwt_token
+```
 
 ---
 
@@ -72,268 +99,303 @@ The dashboard will automatically detect the test run and start showing live metr
 
 ```
 stress-testing-boilerplate/
-├── package.json                          # k6 run scripts for all phases/envs
-├── README.md
-├── .gitignore
-│
-├── env/                                  # Environment configurations
-│   ├── local.env                         # Local development
-│   ├── dev.env                           # Development server
-│   ├── stag.env                          # Staging (fill in)
-│   └── prod.env                          # Production (fill in)
-│
-├── helpers/                              # Shared k6 helper modules
-│   ├── auth.js                           # Auth header builder
-│   ├── checks.js                         # Response validation (k6 checks)
-│   ├── config.js                         # Test phase configs & thresholds
-│   ├── health-checks.js                  # Health check pre-flight
-│   ├── http.js                           # HTTP method wrappers (GET/POST/PUT/PATCH/DELETE)
-│   ├── metrics.js                        # Metric factory + recorder
-│   └── summary.js                        # handleSummary for JSON export
-│
-├── scripts/                              # Service-specific test scripts
-│   └── vcontent/                         # VContent API tests
-│       ├── main.js                       # Entry point (scenarios + options)
-│       ├── payloads/
-│       │   └── custom-message.payload.js # Request body factory
-│       └── scenarios/
-│           └── create-custom-message.scenario.js
-│
-├── results/                              # k6 output (gitignored)
-│   ├── output.json                       # Realtime NDJSON stream
-│   ├── summary.json                      # Latest test summary
-│   └── summary-*.json                    # Archived summaries
-│
-└── dashboard/                            # Realtime metrics dashboard
-    ├── package.json
-    ├── vite.config.ts
-    ├── server/
-    │   ├── server.js                     # Express + WebSocket backend
-    │   └── parser.js                     # k6 NDJSON parser
-    └── src/
-        ├── App.tsx                       # Layout + routing
-        ├── main.tsx                      # Entry point
-        ├── index.css                     # Tailwind styles
-        ├── types/metrics.ts              # TypeScript type definitions
-        ├── store/metricsStore.tsx         # State management (React Context)
-        ├── hooks/useMetricsStream.ts     # WebSocket hook
-        ├── components/
-        │   ├── Header.tsx                # App bar + status
-        │   ├── Sidebar.tsx               # Navigation
-        │   ├── MetricCard.tsx            # Stat card component
-        │   ├── RealtimeChart.tsx         # Recharts wrapper
-        │   ├── StatusBadge.tsx           # Status indicator
-        │   └── ThresholdTable.tsx        # Threshold pass/fail table
-        └── pages/
-            ├── LiveDashboard.tsx          # Realtime charts
-            ├── SummaryDashboard.tsx       # Post-run summary
-            └── HistoryPage.tsx            # Past test runs
++-- package.json                 # npm scripts for k6 + dashboard
++-- env/
+|   +-- local.env               # BASE_URL, AUTH_TOKEN, TEST_PHASE
+|   +-- dev.env
+|   +-- stag.env
+|   +-- prod.env
++-- helpers/
+|   +-- auth.js                 # Bearer token header builder
+|   +-- checks.js               # Response validation (k6 checks)
+|   +-- config.js               # Centralized config + phase profiles
+|   +-- health-checks.js        # Pre-flight GET /health check
+|   +-- http.js                 # HTTP method wrappers (GET/POST/PUT/PATCH/DELETE)
+|   +-- metrics.js              # Metric factory (createMetrics/recordMetrics)
+|   +-- summary.js              # handleSummary JSON + text export
++-- scripts/
+|   +-- generic/
+|       +-- main.js             # Universal k6 entry point
++-- results/
+|   +-- output.json             # k6 NDJSON stream (gitignored)
+|   +-- summary.json            # Post-test summary (gitignored)
++-- dashboard/
+    +-- package.json
+    +-- vite.config.ts
+    +-- server/
+    |   +-- server.js           # Express + WebSocket backend
+    |   +-- parser.js           # k6 NDJSON parser
+    |   +-- runner.js           # k6 process spawner (native/Docker)
+    |   +-- presets.js          # Saved test configurations
+    |   +-- presets.json        # Preset storage file
+    +-- src/
+        +-- App.tsx             # Layout + routes
+        +-- types/
+        |   +-- metrics.ts      # Metric/dashboard types
+        |   +-- testConfig.ts   # Test configuration types
+        +-- store/
+        |   +-- metricsStore.tsx # React Context state
+        +-- hooks/
+        |   +-- useMetricsStream.ts  # WebSocket hook
+        +-- components/
+        |   +-- Header.tsx
+        |   +-- Sidebar.tsx
+        |   +-- StatusBadge.tsx
+        |   +-- MetricCard.tsx
+        |   +-- RealtimeChart.tsx
+        |   +-- ThresholdTable.tsx
+        |   +-- HeaderKeyValueEditor.tsx
+        |   +-- JsonEditor.tsx
+        +-- pages/
+            +-- TestConfigPage.tsx    # Test configuration + runner
+            +-- LiveDashboard.tsx     # Realtime metric charts
+            +-- SummaryDashboard.tsx  # Post-test summary
+            +-- HistoryPage.tsx       # Past test runs
 ```
+
+---
+
+## Environment Variables
+
+All test parameters are passed via environment variables (`--env-file` or `-e` flags):
+
+| Variable           | Description                                      | Default                |
+| :----------------- | :----------------------------------------------- | :--------------------- |
+| `BASE_URL`         | Target base URL                                  | `http://localhost:3000` |
+| `ENDPOINT`         | Path to test (e.g., `/api/users`)                | `/`                    |
+| `HTTP_METHOD`      | HTTP method (GET, POST, PUT, PATCH, DELETE)      | `GET`                  |
+| `REQUEST_BODY`     | JSON string for request body                     | (empty)                |
+| `REQUEST_HEADERS`  | JSON string of extra headers                     | `{}`                   |
+| `AUTH_TOKEN`       | Bearer token for Authorization header            | (empty)                |
+| `TEST_PHASE`       | smoke, load, stress, soak                        | `smoke`                |
+| `TEST_TYPE`        | `fe` (frontend) or `be` (backend)                | `be`                   |
+| `METRIC_NAME`      | Custom metric prefix (auto-derived from endpoint)| (auto)                 |
+| `VUS`              | Override VU count                                | (phase default)        |
+| `DURATION`         | Override duration                                | (phase default)        |
 
 ---
 
 ## Test Phases
 
-Run tests with `npm run k6:vcontent:<phase>:<env>`:
-
-| Phase | VU Profile | Purpose | Command |
-|-------|-----------|---------|---------|
-| **health** | 1 VU, 1 iter | Pre-flight API check | `npm run k6:vcontent:health:local` |
-| **smoke** | 2 VUs, 30s constant | Verify API works under minimal load | `npm run k6:vcontent:smoke:local` |
-| **load** | 0→50 VUs ramp, 2min plateau | Simulate expected traffic | `npm run k6:vcontent:load:local` |
-| **stress** | 0→50→100→200 VUs ramp | Find breaking point | `npm run k6:vcontent:stress:local` |
-| **soak** | 30 VUs for 15 minutes | Detect memory leaks & degradation | `npm run k6:vcontent:soak:local` |
-
-Replace `:local` with `:dev` to target the dev environment.
-
-### VU Ramp Profiles
-
-```
-SMOKE:     ███████████████████████████████  2 VUs for 30s
-
-LOAD:      ╱████████████████████████████╲   0→50 VUs (30s) → hold (2m) → down (30s)
-           0   30s        2min        3min
-
-STRESS:    ╱███╱██████╱█████████████████╲   0→50→100→200 VUs with holds
-           0  30s  1m  2m   3m   4m   5m
-
-SOAK:      ╱█████████████████████████████╲  0→30 VUs (1m) → hold (15m) → down (1m)
-           0  1m              16m      17m
-```
+| Phase      | Executor     | VUs          | Duration | Purpose                               |
+| :--------- | :----------- | :----------- | :------- | :------------------------------------ |
+| **Smoke**  | constant-vus | 2            | 30s      | Verify correctness under minimal load |
+| **Load**   | ramping-vus  | 0 → 50 → 0  | ~3min    | Simulate expected production traffic  |
+| **Stress** | ramping-vus  | 0 → 200 → 0 | ~5.5min  | Find breaking point + recovery        |
+| **Soak**   | ramping-vus  | 0 → 30 → 0  | ~17min   | Detect memory leaks under sustained load |
 
 ---
 
-## Metrics Collected
+## Test Phase Flows
 
-### Per-Request Metrics (via `createMetrics()` factory)
+### Smoke Test
 
-| Metric | Type | Description |
-|--------|------|-------------|
-| `{name}_duration` | Trend | Total response time (ms) |
-| `{name}_ttfb` | Trend | Time To First Byte (ms) |
-| `{name}_connecting` | Trend | TCP connection time (ms) |
-| `{name}_tls_handshaking` | Trend | TLS handshake time (ms) |
-| `{name}_response_size` | Trend | Response body size (bytes) |
-| `{name}_errors` | Rate | Error rate (status >= 400) |
-| `{name}_requests` | Counter | Total request count |
-| `{name}_status_2xx` | Counter | Successful responses |
-| `{name}_status_4xx` | Counter | Client errors |
-| `{name}_status_5xx` | Counter | Server errors |
+Minimal verification — confirm the endpoint is reachable and responds correctly under almost no load.
 
-### Built-in k6 Metrics (automatic)
+```
+  VUs
+   2 |████████████████████████████████████|
+   1 |                                    |
+   0 +------------------------------------+→ time
+     0s                                  30s
 
-| Metric | Description |
-|--------|-------------|
-| `http_req_duration` | End-to-end response time |
-| `http_req_waiting` | TTFB (server processing time) |
-| `http_req_failed` | Failed request rate |
-| `http_reqs` | Total HTTP requests |
-| `vus` | Active virtual users |
-| `data_sent` / `data_received` | Network throughput |
+     ╔═══════════════════════════════════╗
+     ║  Phase: constant @ 2 VUs / 30s    ║
+     ╚═══════════════════════════════════╝
+```
 
-### Default Thresholds
+**Flow:**
+```
+  ┌──────────┐    ┌──────────────┐    ┌───────────────────┐    ┌──────────────┐
+  │  Start   │──▶│  2 VUs send   │──▶│  Validate status  │──▶│  Collect     │
+  │  k6 run  │    │  requests    │    │  codes, latency,  │    │  summary &   │
+  │          │    │  for 30s     │    │  response body    │    │  thresholds  │
+  └──────────┘    └──────────────┘    └───────────────────┘    └──────────────┘
+```
 
-| Phase | p95 Latency | Avg Latency | Error Rate |
-|-------|------------|-------------|------------|
-| Smoke | < 1000ms | < 500ms | < 1% |
-| Load | < 500ms | < 300ms | < 5% |
-| Stress | < 2000ms | < 1000ms | < 15% |
-| Soak | < 500ms | < 300ms | < 5% |
+**Thresholds:** p95 < 1000ms · avg < 500ms · error rate < 1%
+
+**When to use:** After deployments, in CI/CD pipelines, or before running heavier tests.
 
 ---
 
-## Dashboard
+### Load Test
 
-### Live Dashboard
-Real-time charts that update as k6 runs:
-- **Response Time** — avg, p90, p95, p99 with threshold line
-- **Throughput** — Requests per second
-- **Error Rate** — Error percentage with threshold warning
-- **Active VUs** — Virtual user count over time
-- **TTFB** — Time To First Byte
-- **Data Transfer** — Bytes sent/received
+Simulate expected production traffic with a controlled ramp-up, sustained plateau, and graceful ramp-down.
 
-### Summary Dashboard
-Post-run aggregated view:
-- Summary stat cards (total requests, avg time, error rate, duration)
-- Percentile breakdown (min, median, p90, p95, p99, max)
-- Threshold pass/fail results
-- Check assertions results
-- Full metrics table
+```
+  VUs
+  50 |         ┌──────────────────────┐
+     |        /                        \
+     |       /       plateau 2min       \
+     |      /                            \
+     |     /                              \
+   0 +----+────────────────────────────────+→ time
+     0s  30s                          2m30s  3m
 
-### History
-Browse and compare past test runs.
+     ╔══════════╗  ╔══════════════╗  ╔══════════╗
+     ║ Ramp up  ║  ║   Plateau    ║  ║ Ramp down║
+     ║ 0→50 VUs ║  ║   50 VUs     ║  ║ 50→0 VUs ║
+     ║   30s    ║  ║    2min      ║  ║   30s    ║
+     ╚══════════╝  ╚══════════════╝  ╚══════════╝
+```
+
+**Flow:**
+```
+  ┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐
+  │  Ramp up │──▶│  Hold at     │───▶│  Monitor     │──▶│  Ramp down   │───▶│  Report  │
+  │  0→50    │    │  50 VUs      │    │  latency,    │    │  50→0 VUs    │    │  summary │
+  │  (30s)   │    │  (2min)      │    │  errors,     │    │  (30s)       │    │  + pass/ │
+  │          │    │              │    │  throughput  │    │              │    │  fail    │
+  └──────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────┘
+```
+
+**Thresholds:** p95 < 500ms · p99 < 1000ms · avg < 300ms · error rate < 5%
+
+**When to use:** Validate production readiness, confirm SLAs are met, establish performance baselines.
 
 ---
 
-## Adding a New Service / Endpoint
+### Stress Test
 
-### 1. Create the payload factory
+Push the system beyond expected limits in escalating steps to find the breaking point and observe recovery.
 
-```javascript
-// scripts/myservice/payloads/create-user.payload.js
-export function createUserPayload() {
-  return {
-    name: `User ${Math.floor(Math.random() * 10000)}`,
-    email: `user${Date.now()}@test.com`,
-  };
-}
+```
+  VUs
+ 200 |                             ┌──────────┐
+     |                            /            \
+ 100 |              ┌────────────┘              \
+     |             /                              \
+  50 |  ┌────────┘                                  \
+     | /                                              \
+   0 +-+────────────────────────────────────────────────+→ time
+     0s 30s   1m30s 2m   3m  3m30s  4m30s  5m      5m30s
+
+     ╔════════╗╔════════╗╔════════╗╔════════╗╔═════════╗╔════════╗╔═════════╗
+     ║ Warmup ║║ Hold   ║║Scale up║║ Hold   ║║  Push   ║║ Hold   ║║Recovery ║
+     ║ 0→50   ║║ 50 VUs ║║50→100  ║║100 VUs ║║100→200  ║║200 VUs ║║ 200→0   ║
+     ║  30s   ║║  1min  ║║  30s   ║║  1min  ║║  30s    ║║  1min  ║║  30s    ║
+     ╚════════╝╚════════╝╚════════╝╚════════╝╚═════════╝╚════════╝╚═════════╝
 ```
 
-### 2. Create the scenario
-
-```javascript
-// scripts/myservice/scenarios/create-user.scenario.js
-import { post } from '../../../helpers/http.js';
-import { authHeaders } from '../../../helpers/auth.js';
-import { createMetrics, recordMetrics } from '../../../helpers/metrics.js';
-import { validateResponse } from '../../../helpers/checks.js';
-import { createUserPayload } from '../payloads/create-user.payload.js';
-
-const BASE_URL = __ENV.MYSERVICE_BASE_URL;
-const JWT_TOKEN = __ENV.MYSERVICE_JWT_TOKEN;
-const metrics = createMetrics('create_user');
-
-export default function createUser() {
-  const res = post(
-    `${BASE_URL}/users`,
-    createUserPayload(),
-    authHeaders(JWT_TOKEN),
-    { endpoint: 'create-user' },
-  );
-  recordMetrics(metrics, res);
-  validateResponse(res, { expectedStatus: 201, name: 'Create User' });
-}
+**Flow:**
+```
+  ┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐
+  │  Warm up │──▶│  Step 1      │───▶│  Step 2      │──▶│  Step 3      │──▶│ Recovery  │
+  │  0→50    │    │  Hold 50 VUs │    │  Scale to    │    │  Push to     │    │  200→0   │
+  │  VUs     │    │  (1min)      │    │  100 VUs     │    │  200 VUs     │    │  observe │
+  │  (30s)   │    │              │    │  hold (1min) │    │  hold (1min) │    │  cooldown│
+  └──────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────┘
+                                                                                    │
+                              ┌──────────────────────────────────────────────────────┘
+                              ▼
+                        ┌──────────────┐
+                        │  Analyze:    │
+                        │  - At which  │
+                        │    VU count  │
+                        │    did it    │
+                        │    degrade?  │
+                        │  - Did it    │
+                        │    recover?  │
+                        └──────────────┘
 ```
 
-### 3. Create the main entry point
+**Thresholds:** p95 < 2000ms · avg < 1000ms · error rate < 15%
 
-```javascript
-// scripts/myservice/main.js
-import { getConfig, buildOptions } from '../../helpers/config.js';
-import { generateSummary } from '../../helpers/summary.js';
-import healthCheck from '../../helpers/health-checks.js';
-import createUser from './scenarios/create-user.scenario.js';
-
-const config = getConfig('MYSERVICE');
-
-export const options = buildOptions(config.testPhase, 'createUser', {
-  'create_user_duration': ['p(95)<500'],
-  'create_user_errors': ['rate<0.05'],
-});
-
-export function setup() {
-  healthCheck(config.baseUrl);
-  return { config };
-}
-
-export default function () {}
-export { createUser };
-export { generateSummary as handleSummary };
-```
-
-### 4. Add environment variables
-
-```env
-# env/local.env
-MYSERVICE_BASE_URL=http://host.docker.internal:3000
-MYSERVICE_JWT_TOKEN=your-token-here
-```
-
-### 5. Add npm scripts
-
-```json
-{
-  "k6:myservice:smoke:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=smoke -v $(pwd):/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/myservice/main.js"
-}
-```
+**When to use:** Before major releases, capacity planning, or discovering system limits and bottlenecks.
 
 ---
 
-## Environment Configuration
+### Soak Test
 
-Each environment file in `env/` contains:
-```env
-<SERVICE>_BASE_URL=https://your-api-url.com
-<SERVICE>_JWT_TOKEN=your-jwt-token
+Sustained moderate load over an extended period to detect memory leaks, connection pool exhaustion, and gradual degradation.
+
+```
+  VUs
+  30 |   ┌────────────────────────────────────────────────────┐
+     |  /                   sustained 15min                    \
+     | /                                                        \
+   0 ++──────────────────────────────────────────────────────────+→ time
+     0s 1m                                                  16m  17m
+
+     ╔══════════╗  ╔══════════════════════════════════════╗  ╔══════════╗
+     ║ Ramp up  ║  ║         Sustained Load               ║  ║ Ramp down║
+     ║ 0→30 VUs ║  ║         30 VUs for 15min             ║  ║ 30→0 VUs ║
+     ║   1min   ║  ║                                      ║  ║   1min   ║
+     ╚══════════╝  ╚══════════════════════════════════════╝  ╚══════════╝
 ```
 
-Available environments: `local`, `dev`, `stag`, `prod`
+**Flow:**
+```
+  ┌──────────┐    ┌──────────────┐    ┌────────────────────────┐    ┌──────────┐
+  │  Ramp up │──▶│  Sustain     │───▶│  Continuously monitor  │──▶│ Ramp down│
+  │  0→30    │    │  30 VUs      │    │  for 15 minutes:       │    │ & report │
+  │  VUs     │    │  steady      │    │  - Memory growth?      │    │          │
+  │  (1min)  │    │  state       │    │  - Latency creep?      │    │ Compare  │
+  └──────────┘    └──────────────┘    │  - Error rate rise?    │    │ start vs │
+                                      │  - Connection leaks?   │    │ end perf │
+                                      └────────────────────────┘    └──────────┘
+```
+
+**Thresholds:** p95 < 500ms · p99 < 1000ms · avg < 300ms · error rate < 5%
+
+**When to use:** Before production release for long-running services, detecting slow resource leaks that only manifest over time.
 
 ---
 
-## Troubleshooting
+## Dashboard Pages
 
-| Issue | Solution |
-|-------|----------|
-| Docker can't reach localhost | Use `--add-host=host.docker.internal:host-gateway` (included in local scripts) |
-| Dashboard not showing data | Ensure Express backend is running on port 3001 |
-| `$(pwd)` not working on Windows | Use PowerShell's `${PWD}` or run from Git Bash |
-| k6 exits with code 99 | A threshold was violated — check the summary |
-| WebSocket keeps disconnecting | Ensure the Express server started before the Vite dev server |
+### New Test (`/config`)
+Configure and launch tests. Toggle FE/BE mode, set target URL, method, body, headers, auth token, test phase. Save and load presets. View k6 console output.
+
+### Live Dashboard (`/`)
+Real-time metrics with auto-discovered charts. Standard charts: Response Time (p50/p90/p95/p99), Throughput, Error Rate, Active VUs, TTFB, Data Transfer, Connection Time. Custom metric charts appear automatically.
+
+### Summary (`/summary`)
+Post-test aggregated results: key metrics, percentile breakdown, threshold pass/fail, checks, full metrics table.
+
+### History (`/history`)
+Browse past test runs. Click to view details with metrics and thresholds.
+
+---
+
+## API Endpoints
+
+| Method   | Path                 | Description                        |
+| :------- | :------------------- | :--------------------------------- |
+| GET      | `/api/status`        | Current test status                |
+| GET      | `/api/summary`       | Latest summary.json                |
+| GET      | `/api/history`       | List past test runs                |
+| GET      | `/api/history/:file` | Specific historical run            |
+| GET      | `/api/metrics`       | Current metric definitions         |
+| GET      | `/api/runner-status` | Runner status + available runners  |
+| GET      | `/api/presets`       | List saved presets                 |
+| POST     | `/api/run-test`      | Start a k6 test                    |
+| POST     | `/api/stop-test`     | Stop running test                  |
+| POST     | `/api/reset`         | Clear buffered data                |
+| POST     | `/api/presets`       | Save a preset                      |
+| DELETE   | `/api/presets/:name` | Delete a preset                    |
+| WS       | `/ws`                | Real-time metric stream            |
+
+---
+
+## Custom Metrics
+
+Every test automatically creates per-endpoint metrics using the metric name prefix (auto-derived from endpoint or manually set):
+
+- `{name}_duration` — Response time (Trend, ms)
+- `{name}_ttfb` — Time to first byte (Trend, ms)
+- `{name}_connecting` — Connection time (Trend, ms)
+- `{name}_tls_handshaking` — TLS handshake time (Trend, ms)
+- `{name}_response_size` — Response body size (Trend, bytes)
+- `{name}_errors` — Error rate (Rate, status >= 400)
+- `{name}_requests` — Request count (Counter)
+- `{name}_status_2xx` — 2xx responses (Counter)
+- `{name}_status_4xx` — 4xx responses (Counter)
+- `{name}_status_5xx` — 5xx responses (Counter)
 
 ---
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).

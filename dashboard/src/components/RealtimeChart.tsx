@@ -12,6 +12,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import type { ChartDataPoint } from '../types/metrics';
+import { useTheme } from '../store/themeStore';
 
 interface RealtimeChartProps {
   title: string;
@@ -42,42 +43,52 @@ export default function RealtimeChart({
   height = 250,
 }: RealtimeChartProps) {
   const ChartComponent = chartType === 'area' ? AreaChart : LineChart;
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  // Theme-aware chart colors
+  const gridColor = isDark ? '#1f2937' : '#e5e7eb';
+  const tickColor = isDark ? '#6b7280' : '#9ca3af';
+  const axisColor = isDark ? '#374151' : '#d1d5db';
+  const tooltipBg = isDark ? '#1f2937' : '#ffffff';
+  const tooltipBorder = isDark ? '#374151' : '#e5e7eb';
+  const tooltipLabel = isDark ? '#9ca3af' : '#6b7280';
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-      <h3 className="text-sm font-medium text-gray-300 mb-3">{title}</h3>
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-4 transition-colors">
+      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">{title}</h3>
 
       {data.length === 0 ? (
-        <div className="flex items-center justify-center text-gray-600 text-sm" style={{ height }}>
+        <div className="flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm" style={{ height }}>
           Waiting for data...
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={height}>
           <ChartComponent data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
             <XAxis
               dataKey="timeLabel"
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={{ stroke: '#374151' }}
-              tickLine={{ stroke: '#374151' }}
+              tick={{ fill: tickColor, fontSize: 11 }}
+              axisLine={{ stroke: axisColor }}
+              tickLine={{ stroke: axisColor }}
               interval="preserveStartEnd"
               minTickGap={40}
             />
             <YAxis
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={{ stroke: '#374151' }}
-              tickLine={{ stroke: '#374151' }}
+              tick={{ fill: tickColor, fontSize: 11 }}
+              axisLine={{ stroke: axisColor }}
+              tickLine={{ stroke: axisColor }}
               unit={yAxisUnit}
               width={60}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1f2937',
-                border: '1px solid #374151',
+                backgroundColor: tooltipBg,
+                border: `1px solid ${tooltipBorder}`,
                 borderRadius: '8px',
                 fontSize: '13px',
               }}
-              labelStyle={{ color: '#9ca3af' }}
+              labelStyle={{ color: tooltipLabel }}
               formatter={(value: number) => [
                 `${value.toFixed(2)}${yAxisUnit}`,
               ]}

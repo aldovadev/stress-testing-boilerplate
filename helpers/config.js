@@ -2,21 +2,75 @@
  * Centralized test configuration.
  * Reads environment variables and provides scenario stage profiles
  * for each test phase (smoke, load, stress, soak).
+ *
+ * Fully app-agnostic — all parameters come from environment variables.
  */
 
 /**
  * Get base configuration from environment variables.
- * @param {string} servicePrefix - Environment variable prefix (e.g., 'VCONTENT')
- * @returns {object} Configuration object with baseUrl, jwtToken, testPhase, etc.
+ * No service-specific prefixes — uses generic env var names.
+ *
+ * Environment Variables:
+ *   BASE_URL       - Target base URL (required)
+ *   ENDPOINT       - API endpoint path, e.g., /api/users (default: /)
+ *   HTTP_METHOD    - HTTP method: GET, POST, PUT, PATCH, DELETE (default: GET)
+ *   REQUEST_BODY   - JSON string for request body (optional)
+ *   REQUEST_HEADERS - JSON string of extra headers (optional)
+ *   AUTH_TOKEN     - Bearer token for Authorization header (optional)
+ *   TEST_PHASE     - smoke | load | stress | soak (default: smoke)
+ *   METRIC_NAME    - Custom metric prefix (auto-derived from endpoint if omitted)
+ *   TEST_TYPE      - fe | be (default: be) — frontend page load vs backend API
+ *   VUS            - Override VU count for constant-vus phases
+ *   DURATION       - Override duration for constant-vus phases
+ *
+ * @returns {object} Configuration object
  */
-export function getConfig(servicePrefix = 'VCONTENT') {
+export function getConfig() {
+  const endpoint = __ENV.ENDPOINT || '/';
+  const metricName = __ENV.METRIC_NAME || deriveMetricName(endpoint);
+
   return {
-    baseUrl: __ENV[`${servicePrefix}_BASE_URL`] || 'http://localhost:3000',
-    jwtToken: __ENV[`${servicePrefix}_JWT_TOKEN`] || '',
+    baseUrl: __ENV.BASE_URL || 'http://localhost:3000',
+    endpoint,
+    httpMethod: (__ENV.HTTP_METHOD || 'GET').toUpperCase(),
+    requestBody: parseJsonEnv(__ENV.REQUEST_BODY),
+    requestHeaders: parseJsonEnv(__ENV.REQUEST_HEADERS) || {},
+    authToken: __ENV.AUTH_TOKEN || '',
     testPhase: (__ENV.TEST_PHASE || 'smoke').toLowerCase(),
+    testType: (__ENV.TEST_TYPE || 'be').toLowerCase(),
+    metricName,
     vus: Number(__ENV.VUS || 1),
     duration: __ENV.DURATION || '10s',
   };
+}
+
+/**
+ * Safely parse a JSON string from an environment variable.
+ * Returns null if the string is empty or invalid.
+ */
+function parseJsonEnv(value) {
+  if (!value || value.trim() === '') return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    console.warn(`[config] Failed to parse JSON env value: ${value.substring(0, 100)}`);
+    return null;
+  }
+}
+
+/**
+ * Derive a metric-safe name from an endpoint path.
+ * e.g., "/api/v1/users" → "api_v1_users"
+ *       "/health" → "health"
+ */
+function deriveMetricName(endpoint) {
+  return endpoint
+    .replace(/^\/+/, '')          // Remove leading slashes
+    .replace(/\/+$/, '')          // Remove trailing slashes
+    .replace(/[^a-zA-Z0-9]+/g, '_')  // Replace non-alphanumeric with _
+    .replace(/_+/g, '_')         // Collapse multiple underscores
+    .toLowerCase()
+    || 'root';                   // Fallback for "/"
 }
 
 /**
@@ -118,8 +172,8 @@ export const phaseThresholds = {
  * @returns {object} k6 options object with scenarios and thresholds
  *
  * @example
- *   export const options = buildOptions('load', 'createCustomMessage', {
- *     'custom_message_duration': ['p(95)<500'],
+ *   export const options = buildOptions('load', 'runTest', {
+ *     'api_users_duration': ['p(95)<500'],
  *   });
  */
 export function buildOptions(phase, execFn, customThresholds = {}) {

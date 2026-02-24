@@ -33,7 +33,7 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">
         <Clock className="w-5 h-5 animate-spin mr-2" />
         Loading history...
       </div>
@@ -43,18 +43,18 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-100">Test History</h2>
-        <p className="text-sm text-gray-500 mt-1">Browse past test runs and compare results</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Test History</h2>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Browse past test runs and compare results</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Run List */}
         <div className="lg:col-span-1 space-y-2">
           {history.length === 0 ? (
-            <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-8 text-center">
-              <FileText className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">No test history found.</p>
-              <p className="text-gray-600 text-xs mt-1">Run a test to see results here.</p>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-8 text-center transition-colors">
+              <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No test history found.</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Run a test to see results here.</p>
             </div>
           ) : (
             history.map((entry) => (
@@ -63,8 +63,8 @@ export default function HistoryPage() {
                 onClick={() => loadRun(entry.filename)}
                 className={`w-full text-left rounded-lg border p-3 transition-colors ${
                   selectedFilename === entry.filename
-                    ? 'border-blue-700 bg-blue-950/30'
-                    : 'border-gray-800 bg-gray-900/50 hover:bg-gray-800/50'
+                    ? 'border-blue-400 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30'
+                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -75,15 +75,15 @@ export default function HistoryPage() {
                       }`}>
                         {entry.phase}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         {entry.vus} VUs / {entry.duration}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 truncate">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                       {new Date(entry.timestamp).toLocaleString()}
                     </p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
                 </div>
               </button>
             ))
@@ -133,9 +133,9 @@ export default function HistoryPage() {
               <ThresholdTable metrics={selectedRun.metrics} />
             </div>
           ) : (
-            <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-12 text-center">
-              <ChevronRight className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">Select a test run to view details</p>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-12 text-center transition-colors">
+              <ChevronRight className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Select a test run to view details</p>
             </div>
           )}
         </div>
@@ -146,11 +146,11 @@ export default function HistoryPage() {
 
 function phaseColor(phase: string): string {
   switch (phase.toLowerCase()) {
-    case 'smoke': return 'bg-blue-950 text-blue-400';
-    case 'load': return 'bg-emerald-950 text-emerald-400';
-    case 'stress': return 'bg-amber-950 text-amber-400';
-    case 'soak': return 'bg-purple-950 text-purple-400';
-    case 'health': return 'bg-gray-800 text-gray-400';
-    default: return 'bg-gray-800 text-gray-400';
+    case 'smoke': return 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400';
+    case 'load': return 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400';
+    case 'stress': return 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400';
+    case 'soak': return 'bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400';
+    case 'health': return 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
+    default: return 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
   }
 }
