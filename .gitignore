@@ -16,5 +16,3 @@ dashboard/server/presets.json
 # Node
 node_modules/
 
-# playwright
-.playwright-mcp
