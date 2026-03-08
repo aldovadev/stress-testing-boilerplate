@@ -396,6 +396,28 @@ Every test automatically creates per-endpoint metrics using the metric name pref
 
 ---
 
+## Development Rules
+
+- Test scripts go in `k6/scripts/`. Each script targets a specific endpoint or scenario. Use the metric name prefix convention for per-endpoint metrics.
+- Presets are user-configurable test profiles. Store presets via the API (`POST /api/presets`). Do not hardcode test parameters.
+- Dashboard pages are defined in the frontend. Keep real-time (WebSocket) and historical (REST API) data flows separate.
+- The runner abstraction supports multiple k6 execution modes. Add new runners by implementing the runner interface.
+- Custom metrics follow the naming convention: `{name}_duration`, `{name}_ttfb`, `{name}_errors`, etc. Do not deviate from this pattern.
+- Environment variables are documented in the env table. All new config must be added to both `.env.example` and the README table.
+- All comments must be single-line (`//` or `#`). No multi-line comment blocks.
+
+## Bug Fix Guidelines
+
+When fixing bugs in this project:
+1. **For WebSocket streaming issues**: Check the `/ws` endpoint and the real-time metric buffer. Verify the client reconnection logic.
+2. **For k6 runner failures**: Check runner status via `GET /api/runner-status`. Verify k6 binary availability and script paths.
+3. **For metric calculation errors**: Check the custom metric definitions. Verify per-endpoint metric naming matches the expected prefix pattern.
+4. **For dashboard rendering issues**: Check the data format returned by `GET /api/summary` and `GET /api/history`. Verify chart component data bindings.
+5. **For preset save/load failures**: Check the preset API (`/api/presets`). Verify file permissions in the preset storage directory.
+6. **For Docker issues**: Check the Docker Compose configuration and environment variable mapping.
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
