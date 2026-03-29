@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMetricsStore } from '../store/metricsStore';
 import MetricCard from '../components/MetricCard';
 import RealtimeChart from '../components/RealtimeChart';
+import { AuroraText } from '@/components/ui/aurora-text';
 import { Timer, Zap, AlertTriangle, Users } from 'lucide-react';
 
 // Built-in k6 metrics that have dedicated charts — don't render them again in the dynamic section
@@ -58,7 +59,7 @@ export default function LiveDashboard() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Live Dashboard</h2>
+        <AuroraText className="text-xl font-semibold" colors={["#f43f5e", "#fb7185", "#e11d48", "#fda4af"]}>Live Dashboard</AuroraText>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Realtime metrics streaming from k6 test execution</p>
       </div>
 

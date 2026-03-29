@@ -9,6 +9,7 @@ import { createServer } from 'http';
 import { parseLine, categorizeMetric } from './parser.js';
 import { startTest, stopTest, getStatus as getRunnerStatus, detectRunner } from './runner.js';
 import { getPresets, savePreset, deletePreset, markPresetUsed } from './presets.js';
+import { setupAuth, authGuard } from './auth.js';
 
 // ─── Configuration ──────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
@@ -28,6 +29,12 @@ let testStartTime = null;
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Auth setup (conditional — only when ENABLE_GOOGLE_AUTH=true)
+setupAuth(app);
+
+// Protect API routes when auth is enabled
+app.use('/api', authGuard);
 
 // GET /api/status — Current test status
 app.get('/api/status', (req, res) => {
@@ -343,7 +350,7 @@ function startWatcher() {
 server.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════╗
-║   K6 Metrics Dashboard - Backend Server          ║
+║   Stresster - Backend Server                     ║
 ║──────────────────────────────────────────────────║
 ║   HTTP API:    http://localhost:${PORT}              ║
 ║   WebSocket:   ws://localhost:${PORT}/ws             ║

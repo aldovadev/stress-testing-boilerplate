@@ -22,12 +22,12 @@ export default function Header({ isConnected, onReset }: HeaderProps) {
       {/* Left: Logo + Title */}
       <div className="flex items-center gap-3">
         <img
-          src={theme === 'dark' ? '/images/logo_dark.png' : '/images/logo_light.png'}
-          alt="K6 Dashboard"
+          src="/images/stresster.svg"
+          alt="Stresster"
           className="w-8 h-8 rounded-lg"
         />
         <div>
-          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">K6 Dashboard</h1>
+          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">Stresster</h1>
         </div>
       </div>
 

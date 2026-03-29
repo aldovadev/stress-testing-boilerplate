@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { MagicCard } from '@/components/ui/magic-card';
 
 interface MetricCardProps {
   title: string;
@@ -17,6 +18,13 @@ const statusColors = {
   warning: 'border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30',
   danger: 'border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30',
   neutral: 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50',
+};
+
+const statusGradientColors: Record<string, string> = {
+  success: '#22c55e',
+  warning: '#eab308',
+  danger: '#ef4444',
+  neutral: '#f43f5e',
 };
 
 const statusValueColors = {
@@ -45,7 +53,11 @@ export default function MetricCard({
   const TrendIcon = trendIcons[trend];
 
   return (
-    <div className={`rounded-xl border p-4 transition-colors hover:brightness-110 ${statusColors[status]}`}>
+    <MagicCard
+      className={`rounded-xl border p-4 transition-colors ${statusColors[status]}`}
+      gradientColor={statusGradientColors[status]}
+      gradientOpacity={0.1}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -78,6 +90,6 @@ export default function MetricCard({
           </span>
         )}
       </div>
-    </div>
+    </MagicCard>
   );
 }
