@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Clock, ChevronRight, FileText } from 'lucide-react';
+import { AuroraText } from '@/components/ui/aurora-text';
 import type { HistoryEntry, SummaryData } from '../types/metrics';
 import MetricCard from '../components/MetricCard';
 import ThresholdTable from '../components/ThresholdTable';
@@ -43,7 +44,7 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Test History</h2>
+        <AuroraText className="text-xl font-semibold" colors={["#f43f5e", "#fb7185", "#e11d48", "#fda4af"]}>Test History</AuroraText>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Browse past test runs and compare results</p>
       </div>
 

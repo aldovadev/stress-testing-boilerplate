@@ -1,7 +1,7 @@
 {
-  "name": "stress-testing-boilerplate",
+  "name": "stresster",
   "version": "2.0.0",
-  "description": "App-agnostic K6 stress testing framework with real-time metrics dashboard",
+  "description": "App-agnostic stress testing framework powered by k6 with real-time metrics dashboard",
   "scripts": {
     "k6:smoke:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=smoke -v ${PWD}:/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/generic/main.js",
     "k6:load:local": "docker run --rm --add-host=host.docker.internal:host-gateway --env-file env/local.env -e TEST_PHASE=load -v ${PWD}:/app -w /app grafana/k6 run --out json=/app/results/output.json scripts/generic/main.js",

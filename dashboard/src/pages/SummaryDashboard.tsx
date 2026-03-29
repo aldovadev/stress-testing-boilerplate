@@ -6,6 +6,7 @@ import {
   Timer, Zap, AlertTriangle, Hash, Clock, ArrowDownToLine, ArrowUpFromLine,
   CheckCircle, XCircle,
 } from 'lucide-react';
+import { AuroraText } from '@/components/ui/aurora-text';
 import type { SummaryData, CheckData, GroupData } from '../types/metrics';
 
 export default function SummaryDashboard() {
@@ -41,7 +42,7 @@ export default function SummaryDashboard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Test Summary</h2>
+          <AuroraText className="text-xl font-semibold" colors={["#f43f5e", "#fb7185", "#e11d48", "#fda4af"]}>Test Summary</AuroraText>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Post-run aggregated results</p>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-12 text-center transition-colors">
@@ -76,7 +77,7 @@ export default function SummaryDashboard() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Test Summary</h2>
+          <AuroraText className="text-xl font-semibold" colors={["#f43f5e", "#fb7185", "#e11d48", "#fda4af"]}>Test Summary</AuroraText>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Post-run aggregated results</p>
         </div>
         {meta && (

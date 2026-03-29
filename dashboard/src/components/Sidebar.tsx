@@ -3,7 +3,7 @@ import { BarChart3, FileText, History, LayoutDashboard, PlayCircle } from 'lucid
 
 const navItems = [
   { to: '/config', icon: PlayCircle, label: 'New Test' },
-  { to: '/', icon: LayoutDashboard, label: 'Live Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Live Dashboard' },
   { to: '/summary', icon: BarChart3, label: 'Summary' },
   { to: '/history', icon: History, label: 'History' },
 ];
@@ -16,7 +16,7 @@ export default function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/dashboard'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -35,7 +35,7 @@ export default function Sidebar() {
       <div className="p-3 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400 dark:text-gray-600">
           <FileText className="w-3 h-3" />
-          <span>K6 Dashboard</span>
+          <span>Stresster v2.0</span>
         </div>
       </div>
     </aside>

@@ -5,6 +5,7 @@ import {
   Globe, Key, Zap, Tag, RotateCcw, Terminal, Loader2,
 } from 'lucide-react';
 import { useMetricsStore } from '../store/metricsStore';
+import { AuroraText } from '@/components/ui/aurora-text';
 import HeaderKeyValueEditor from '../components/HeaderKeyValueEditor';
 import JsonEditor from '../components/JsonEditor';
 import type {
@@ -156,14 +157,14 @@ export default function TestConfigPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Test Configuration</h2>
+          <AuroraText className="text-xl font-semibold" colors={["#f43f5e", "#fb7185", "#e11d48", "#fda4af"]}>Test Configuration</AuroraText>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             Configure and launch stress tests for any endpoint or route
           </p>
         </div>
         {isRunning && (
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             View Live Dashboard
